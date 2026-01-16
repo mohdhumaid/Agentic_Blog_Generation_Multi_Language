@@ -100,58 +100,49 @@ class BlogNode:
             "blog": blog,
         }
 
-    def translation(self,state:BlogState):
+    
+    def translation(self, state: BlogState):
         """
-        Translate the content to the specified language.
+        Translate the blog into the specified target language.
+        Always returns strict JSON.
         """
-        translation_prompt="""
-        Translate the following content into {current_language}.
-        - Maintain the original tone, style, and formatting.
-        - Adapt cultural references and idioms to be appropriate for {current_language}.
 
-        ORIGINAL CONTENT:
-        {blog_content}
+        target_language = state["current_language"]
 
-        """
-        print(state["current_language"])
-        blog_content=state["blog"]["content"]
-        messages1=[
-            HumanMessage(translation_prompt.format(current_language=state["current_language"], blog_content=blog_content))
-
-        ]
-        messages=[
+        messages = [
             {
                 "role": "system",
                 "content": (
-                    "You are a translation engine. "
-                    "Translate the given blog to Hindi. "
-                    "Return ONLY valid JSON matching this schema:\n"
-                    "{ 'title': string, 'content': string }"
+                    "You are a professional translation engine.\n"
+                    f"Translate the given blog into {target_language}.\n"
+                    "Maintain tone, structure, and formatting.\n"
+                    "Return ONLY valid JSON in the format:\n"
+                    "{ \"title\": string, \"content\": string }"
                 )
             },
             {
                 "role": "user",
                 "content": f"""
-        Title:
-        {state['blog']['title']}
+    Title:
+    {state['blog']['title']}
 
-        Content:
-        {state['blog']['content']}
-        """
+    Content:
+    {state['blog']['content']}
+    """
             }
         ]
+
         response = self.llm.invoke(messages)
 
-        
         translated = safe_json_parse(response.content)
 
         return {
+            **state,
             "blog": {
                 "title": translated["title"],
                 "content": translated["content"]
             }
         }
-
 
 
     def route(self, state: BlogState):
